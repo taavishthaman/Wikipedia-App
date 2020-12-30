@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -65,7 +66,12 @@ class _MainViewState extends State<MainView> {
                 return ListView.builder(
                   itemCount: snapshot.data["Titles"].length,
                   itemBuilder: (BuildContext context, int index){
-                    return ItemCard(snapshot.data["Titles"][index], snapshot.data["Urls"][index]);
+                    return ItemCard(
+                        snapshot.data["Titles"][index],
+                        snapshot.data["PageIds"][index],
+                        snapshot.data["Thumbnails"][index] == null ? null : snapshot.data["Thumbnails"][index],
+                        snapshot.data["Descriptions"][index]
+                    );
                   }
                 );
               }
@@ -108,27 +114,30 @@ class _MainViewState extends State<MainView> {
   }
 }
 
-final baseApi = "http://en.wikipedia.org";
+final baseApi = "https://en.wikipedia.org";
 
 Future<Map<String, dynamic>> fetchResponses(String query) async {
-  var result = await http.get(baseApi+"/w/api.php?action=opensearch&search="+query);
+  var result = await http.get(baseApi+"/w/api.php?action=query&format=json&prop=pageimages|pageterms&generator=prefixsearch&redirects=1&piprop=thumbnail&pithumbsize=50&pilimit=10&wbptterms=description&gpssearch="+query+"&gpslimit=10");
+  //var result = await http.get(baseApi+"/w/api.php?action=opensearch&search="+query+"&prop=pageimages|pageterms");
+    //var result = await http.get(baseApi+"action=query&formatversion=2&generator=prefixsearch&gpssearch="+query+"&gpslimit=10&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=50&pilimit=10&redirects=&wbptterms=description");
 
   String fileName = query+".json";
   var dir = await getTemporaryDirectory();
   File file = new File(dir.path+"/"+fileName);
   //Uncomment this code in case you want to delete a file from cache.
-  /*try{
+  try {
     file.delete();
     print("Successfully deleted");
   }
   catch(e){
     print(e);
-  }*/
+  }
   if(file.existsSync()){
     print("......................................Loading from Cache................................................");
     var jsonData = file.readAsStringSync();
+    print(jsonData);
     List<dynamic> body = jsonDecode(jsonData);
-
+    print("Body "+body.toString());
     List<dynamic> titles = new List<dynamic>();
     List<dynamic> urls = new List<dynamic>();
     String searchKeyword = query;
@@ -143,19 +152,27 @@ Future<Map<String, dynamic>> fetchResponses(String query) async {
   }
   else{
     print("......................................Loading from API................................................");
-    List<dynamic> body = jsonDecode(result.body);
-    file.writeAsStringSync(jsonEncode(body), flush: true, mode: FileMode.write);
+    Map<String, dynamic> map = jsonDecode(result.body);
+    Map<String, dynamic> decodedMap = map['query']['pages'];
+    //file.writeAsStringSync(jsonEncode(map), flush: true, mode: FileMode.write);
 
-    List<dynamic> titles = new List<dynamic>();
-    List<dynamic> urls = new List<dynamic>();
-    String searchKeyword = query;
-    for(var title in body[1]){
-      titles.add(title);
+    List<dynamic> pageIds = new List<dynamic>();
+    List<dynamic> thumbnails = new List<dynamic>();
+    List<String> titles = new List<String>();
+    List<String> descriptions = new List<String>();
+    for(var key in decodedMap.keys){
+      pageIds.add(key);
+      decodedMap[key]["thumbnail"] == null ? thumbnails.add(null) : thumbnails.add(decodedMap[key]["thumbnail"]["source"]);
+      descriptions.add(decodedMap[key]['terms']['description'][0]);
+      titles.add(decodedMap[key]['title']);
     }
-    for(var url in body[3]){
-      urls.add(url);
-    }
-    Map<String, dynamic> map = {"Keyword" : searchKeyword, "Titles" : titles, "Urls" : urls};
-    return map;
+    print(pageIds);
+    print(thumbnails);
+    print(descriptions);
+    print(titles);
+
+    Map<String, dynamic> resultMap = {"Keyword" : query, "Titles" : titles, "PageIds" : pageIds, "Thumbnails" : thumbnails, "Descriptions" : descriptions};
+
+    return resultMap;
   }
 }

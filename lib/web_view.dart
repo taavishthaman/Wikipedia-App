@@ -42,7 +42,7 @@ class _WebPageState extends State<WebPage> {
               });
             },
           ),
-          isLoading ? Center( child: CircularProgressIndicator(),)
+          isLoading ? Center( child: CircularProgressIndicator())
               : Stack(),
         ],
       )
