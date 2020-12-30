@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'dart:io';
 
 class WebPage extends StatefulWidget {
@@ -12,40 +12,62 @@ class WebPage extends StatefulWidget {
 }
 
 class _WebPageState extends State<WebPage> {
-  bool isLoading=true;
-
-  final Completer<WebViewController> _controller = Completer<WebViewController>();
+  InAppWebViewController webView;
   String url; String name;
   _WebPageState(this.url, this.name);
-
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(name),
-      ),
-      body: Stack(
-        children: <Widget>[
-          WebView(
-            initialUrl : url,
-            javascriptMode: JavascriptMode.unrestricted,
-            onPageFinished: (finish) {
-              setState(() {
-                isLoading = false;
-              });
-            },
-          ),
-          isLoading ? Center( child: CircularProgressIndicator())
-              : Stack(),
-        ],
-      )
+        appBar: AppBar(
+          title: Text(name),
+        ),
+        body: Container(
+            child: Column(children: <Widget>[
+              Expanded(
+                  child: InAppWebView(
+                  initialUrl: url,
+                  initialHeaders: {},
+                  initialOptions: InAppWebViewGroupOptions(
+                    crossPlatform: InAppWebViewOptions(
+                      //Enabled cache
+                      cacheEnabled: true,
+                      debuggingEnabled: true,
+                    ),
+                  ),
+                  onWebViewCreated: (InAppWebViewController controller) {
+                    webView = controller;
+                  },
+                  onLoadStart: (InAppWebViewController controller,
+                      String url) {
+
+                  },
+                  onLoadStop: (InAppWebViewController controller,
+                      String url) {
+
+                  },
+                  onLoadError: (controller, url, code, message) {
+                    print(code);
+                    print(message);
+                  },
+                  onLoadHttpError: (controller, url, statusCode,
+                      description) {
+                    print(statusCode);
+                    print(description);
+                  },
+                ))
+            ])),
     );
   }
 }
+
+
